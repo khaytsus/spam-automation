@@ -1,153 +1,318 @@
-I've made a set of scripts which perform a handy list of functions for me related to Spam and email handling..  Here's a basic list of the features:
+This is a set of scripts which perform a handy list of functions for me related
+to Spam and email handling..  Here's a basic list of the features:
 
-    Spam
-        Automatic cross-training between Spam Assassin and DSpam
-        Easy mailbox-oriented workflow to train or retrain.
-    Archival
-        Automatic archival of emails after specified number of days into an Archive mailbox.
-    Deletion
-        Automatic deletion of emails after a specified number of days.
+Spam
+ - Automatic cross-training between Spam Assassin and DSpam
+ - Easy mailbox-oriented workflow to train or retrain.
 
-Example workflow when Spam arrives:
+Archival
+ - Automatic archival of emails after specified number of days into an Archive mailbox.
 
-Spam comes in, DSpam happens to recognize it as Spam but for some reason Spam Assassin does not.  The mail is dropped into a mailbox for SA to retrain against.   After this process completes, the mail is dropped into a folder where it remains for a specified period (4 days for me) if the email is below a certain threshold of confidence.  If DSpam is very confident that the email is a Spam, it's dropped directly into the Trash.  Otherwise, the spam sits in a mailbox where I can scan the entries to make sure no false positives have gotten misclassified at my convenience.
+Deletion
+ - Automatic deletion of emails after a specified number of days.
+
+ --- Example workflow when Spam arrives
+
+Spam comes in, DSpam happens to recognize it as Spam but for some reason Spam
+Assassin does not.  The mail is dropped into a mailbox for SA to retrain against. 
+After this process completes, the mail is dropped into a folder where it remains
+for a specified period (4 days for me) if the email is below a certain threshold
+of confidence.  If DSpam is very confident that the email is a Spam, it's dropped
+directly into the Trash.  Otherwise, the spam sits in a mailbox where I can scan
+the entries to make sure no false positives have gotten misclassified at my
+convenience.
 
 If an email gets misclassified:
 
-I simply move the email from the Spam box to the Not-Spam box in any of my imap clients.  I can do that from Squirrel Mail, Chattermail on my Treo, Roundcube, Thunderbird, etc.  Once it's moved, it's rescanned and placed in a secondary folder for moving back to the Inbox or to its final destination.  Note:  This isn't ideal, I'd prefer it be able to move the email directly back to the Inbox but I haven't experimented with this yet as I fear locking/losing mail.  This way is perfectly safe.
+I simply move the email from the Spam box to the Not-Spam box in any of my imap
+clients.  I can do that from Squirrel Mail, Chattermail on my Treo, Roundcube,
+Thunderbird, etc.  Once it's moved, it's rescanned and placed in a secondary
+folder for moving back to the Inbox or to its final destination.  Note:  This
+isn't ideal, I'd prefer it be able to move the email directly back to the Inbox
+but I haven't experimented with this yet as I fear locking/losing mail.  This
+way is perfectly safe.
 
 If spam winds up in my inbox:
 
-Move it to the Spam folder.  Done.  It's then rescanned and moved to another folder.
+Move it to the Spam folder.  Done.  It's then rescanned and moved to another
+folder.
 
-All of this is handled by a set of scripts which I'll describe below along with the script, and at the end how to put it all together.  Some of the scripts below might fit your needs by themselves or you might want to use the entire 'system'.  However you see fit to utilize them, hope they're useful to you!
+All of this is handled by a set of scripts which I'll describe below along with
+the script, and at the end how to put it all together.  Some of the scripts below
+might fit your needs by themselves or you might want to use the entire 'system'.
+However you see fit to utilize them, hope they're useful to you!
 
-This might seem like a lot of information, take it in pieces.  I'll try to make it as clear as possible, but I'll probably refine the information and update bits and pieces as well as update the scripts from time to time so take your time and check back for updates. 
-Assumptions
+This might seem like a lot of information, take it in pieces.  I'll try to make it
+as clear as possible, but I'll probably refine the information and update bits and
+pieces as well as update the scripts from time to time so take your time and check
+back for updates. 
 
-These scripts and the whole system make some basic assumptions.  You can change those assumptions in the scripts as they are quite easy to edit (most are Bash, one you likely won't need to edit is Perl).
+ --- Assumptions
 
-First assumption; you're using a POSIX-compliant OS.  Linux, FreeBSD, Solaris, etc.  If you're using Windows, gallop your little horsey cursor up to the big pretty red X button in the top-right corner of this window and use the left mouse button to close your browser. 
+These scripts and the whole system make some basic assumptions.  You can change
+those assumptions in the scripts as they are quite easy to edit (most are Bash,
+one you likely won't need to edit is Perl).
 
-You are using mbox format in your MTA.   Honestly I'm not sure what would need changing to use these scripts in a maildir format, it could be very simple or complex.
+First assumption; you're using a POSIX-compliant OS.  Linux, FreeBSD, Solaris,
+etc.
 
-You are using DSpam and/or Spam Assassin.  DSpam is an excellent spam tool, however it can take months to get proper training.  After this initial training, it can accurately tag Spam about 99.9% of the time or better.  Pairing up with Spam Assassin and the cross-training in this system of scripts you get the best spam filtering (less spam in your inbox) and fast training for DSpam.  Think of Spam Assassin as DSpam's coach at first.  Soon the student will exceed the master.
+You are using mbox format in your MTA.   Honestly I'm not sure what would need
+changing to use these scripts in a maildir format, it could be very simple or
+complex.
 
-You have some basic scripting/shell background.  There is no one-click installation here, things must be customized for your installation a bit.  Not much, but it's not plug-and-play. 
-Concepts
+You are using DSpam and/or Spam Assassin.  DSpam is an excellent spam tool, however
+it can take months to get proper training.  After this initial training, it can
+accurately tag Spam about 99.9% of the time or better.  Pairing up with Spam
+Assassin and the cross-training in this system of scripts you get the best spam
+filtering (less spam in your inbox) and fast training for DSpam.  Think of Spam
+Assassin as DSpam's coach at first.  Soon the student will exceed the master.
+
+You have some basic scripting/shell background.  There is no one-click
+installation here, things must be customized for your installation a bit.  Not
+much, but it's not plug-and-play. 
+
+ --- Concepts
 
 Here's a list of some basic concepts and definitions within the system..
 
-    MTA
-        Mail Transfer Agent.  Sendmail,  postfix, qmail, etc
-    MUA
-        Mail User Agent.  Your mail client.  Also can be used for procmail
-    procmail
-        Powerful mail filtering system.  Once DSpam or Spam Assassin has tagged a mail, procmail is what does the action to move the mail to the "right place".
-    crontab
-        Scheduling tool which allows you to run programs or scripts at a given time.  In the examples following, we'll run a script to check the spam folder every hour and purge old mail once a day.
-    False Positive
-        An incorrect assumption by a spam program which marks an email as Spam when it is not.  Can happen somewhat frequently when initially training but the rate goes down to a very low rate when trained.  (I haven't seen a false positive in months right now..)
-    Training
-        Spam Assassin has a set of rules which it ships with which are nice, but it also has a way to train to recognize Spam which is not covered by the rules.
-        DSpam is entirely trained by you.  Good or bad, remember that!  Spam Assassin can help train DSpam using this system of scripts, which is one of the main reasons I suggest using both.
-        HINT:  If a mail is "sorta spammy" I don't suggest retraining it.  Just delete it.  For instance if you get a mailer from an online business you buy from occasionally and mark it as Spam, likely every email from them from now on will be marked as Spam, including your purchase confirmations, etc.  For this reason my wife and DSpam don't "get along" so I disable it for her specific account and just let Spam Assassin handle her spam.  Of course you can retrain it back, but I find that it takes a mild amount of brow beating to get DSpam to stop marking mail as Spam that you've told it that it missed. 
+MTA
+ - Mail Transfer Agent.  Sendmail,  postfix, qmail, etc
 
-Here's a list of the mailboxes associated with this system so it's clear what each is intended for.  At first they might look a little confusing, but they're consistent so they'll make sense.
+MUA
+ - Mail User Agent.  Your mail client.  Also can be used for procmail
 
-    INBOX
-        Where your email sits before you or procmail move it elsewhere.  Typical system mailbox.
-    Trash
-        Where your email goes when it gets deleted assuming you don't delete immediately.  I do not, I let my mbox-purge script handle it after 30 days in case I want to retrieve something later.  Also this is a good destination for spam when DSpam is very confident that the mail is spam.  This is another typical system mailbox. 
-    Spam
-        Where you or procmail moves Spam which needs training by both DSpam and Spam Assassin.
-    Spam-SpamAss
-        Where procmail moves Spam which needs training by DSpam.  You don't normally touch this box as it's part of the background crontab processing. 
-    Spam-DSpam
-        Where procmail move Spam which needs training by Spam Assassin.  Again, you don't normally touch this box.
-    Spam-Old
-        When the Spam box has been processed, email is moved here so it is no longer processed by any filters.
-        This is where you would look to make sure no email got processed incorrectly (See False Positive above)
-    NotSpam
-        If you do find a False Positive in the Spam box, or maybe you accidentally moved an email to the Spam folder and it got processed into the Spam-Old filter, this is where you would move the email in order to be reprocessed
-        FYI, if the accident mentioned above happens and you move it while it's still in the Spam folder, just move it back to the right place as it has not yet been scanned yet or it would be in Spam-Old.
-    NotSpam-Old
-        Where rescanned/retrained email winds up once it has been processed as not being spam because you placed the email in the NotSpam box.  From here you would move it to the appropriate box or back to your INBOX.
-        Ideally this could move the email back to your INBOX automatically, but I currently do not attempt to do that.  It is something I'll investigate in the near future.  It's actually rare anymore that I have to do anything in this box but you might have to use it a bit at first when training.
+procmail
+ - Powerful mail filtering system.  Once DSpam or Spam Assassin has tagged a
+   mail, procmail is what does the action to move the mail to the "right place".
 
-spam-check script
+crontab
+ - Scheduling tool which allows you to run programs or scripts at a given time.
+   In the examples following, we'll run a script to check the spam folder every
+   hour and purge old mail once a day.
 
-This script is ran in a crontab on a schedule and checks the appropriate mailboxes for email to process for spam or to retrain email which is not spam.
+False Positive
+ - An incorrect assumption by a spam program which marks an email as Spam when
+   it is not.  Can happen somewhat frequently when initially training but the
+   rate goes down to a very low rate when trained.  (I haven't seen a false
+   positive in months right now..)
 
-You will need to edit the binary locations of files near the top of the script to point to your dspam_retrain script and sa-learn scripts but otherwise the script should not need much editing.  If your DSpam folder isn't /var/dspam you'll want to edit the dspam_home variable at the top as well.
+Training
+ - Spam Assassin has a set of rules which it ships with which are nice, but it also
+   has a way to train to recognize Spam which is not covered by the rules.
+ - DSpam is entirely trained by you.  Good or bad, remember that!  Spam Assassin
+   can help train DSpam using this system of scripts, which is one of the main
+   reasons I suggest using both.
+ - HINT:  If a mail is "sorta spammy" I don't suggest retraining it.  Just delete
+   it.  For instance if you get a mailer from an online business you buy from
+   occasionally and mark it as Spam, likely every email from them from now on will
+   be marked as Spam, including your purchase confirmations, etc.  For this reason
+   my wife and DSpam don't "get along" so I disable it for her specific account
+   and just let Spam Assassin handle her spam.  Of course you can retrain it back,
+   but I find that it takes a mild amount of brow beating to get DSpam to stop
+   marking mail as Spam that you've told it that it missed. 
 
-The script is here and is to be placed in a reasonable place.  You can put it in your $HOME/bin or /usr/bin or /usr/local/bin or wherever you feel. 
-purge-mail script
+Here's a list of the mailboxes associated with this system so it's clear what
+each is intended for.  At first they might look a little confusing, but they're
+consistent so they'll make sense.
 
-This script is also ran on a  want your Trash emptied, your Spam-Old emails deleted, and if you have mailing lists coming in or mailboxes which generally can get quite large you can place lines in this script which will not only delete old email but can archive old email (move them to another mailbox).  I find IMAP can get a little bogged down by very large mailboxes, so I archive my mailing lists at 180 days so they never get too large.  If I need to, I can look in the Archive for that mailbox.
+INBOX
+ - Where your email sits before you or procmail move it elsewhere.  Typical system
+   mailbox.
 
-The script is here and I would put it with the other scripts. 
-mbox-purge script
+Trash
+ - Where your email goes when it gets deleted assuming you don't delete immediately.
+   I do not, I let my mbox-purge script handle it after 30 days in case I want to
+   retrieve something later.  Also this is a good destination for spam when DSpam
+   is very confident that the mail is spam.  This is another typical system mailbox. 
 
-This script is secret ninja business and you shouldn't even look at it.  Seriously, it's complicated.  I've modified it to give me the ability to Archive email, beyond that I've feared to explore.
+Spam
+ - Where you or procmail moves Spam which needs training by both DSpam and Spam
+   Assassin.
 
-One thing you will need to do is install a Perl module named RS::Handy by the same guy who wrote this script in the first place, it can be found here and you'll want to make sure it doesn't need any other modules by running the script with no arguments and seeing if it gives you arguments for use or an error.  Other possibilities for modules required are Proc::WaitState or File::Spec both of which can be found on search.cpan.org (typical Perl module search engine).
+Spam-SpamAss
+ - Where procmail moves Spam which needs training by DSpam.  You don't normally
+   touch this box as it's part of the background crontab processing.  If the name
+   seems backwards, think of it as Spam Assassin controls this box.
 
-The script is here.  Note that this script is a modified version of what you can find at the website where you download the RS::Handy Perl module above.  His version does not do archival.  If you don't need this, you might investigate using his script as it's updated from mine.  Come to think of it, I should probably send him my hacked version and see if he'll add it to his as he's obviously a better Perl coder than myself.
-dspam_retrain script
+Spam-DSpam
+ - Where procmail move Spam which needs training by Spam Assassin.  Again, you
+   don't normally touch this box.
 
-One additional script which is used to retrain emails inadvertently marked as spam is dspam_retrain, a script I found at http://www.nixworld.com/dspam_retrain.sh
+Spam-Old
+ - When the Spam box has been processed, email is moved here so it is no longer
+   processed by any filters.
+ - This is where you would look to make sure no email got processed incorrectly
+   (See False Positive above)
 
-I don't know if the version there has changed, I'll look into it.  For now, I'll link my current version here.
-procmail config
+NotSpam
+ - If you do find a False Positive in the Spam box, or maybe you accidentally
+   moved an email to the Spam folder and it got processed into the Spam-Old filter,
+   this is where you would move the email in order to be reprocessed
+ - FYI, if the accident mentioned above happens and you move it while it's still
+   in the Spam folder, just move it back to the right place as it has not yet
+   been scanned yet or it would be in Spam-Old.
 
-procmail is the bread and butter of mail filtering.  Once you understand it (or at llder, pipe it into a program to do work on and probably lots of other things I don't know about.
+NotSpam-Old
+ - Where rescanned/retrained email winds up once it has been processed as not
+   being spam because you placed the email in the NotSpam box.  From here you would
+   move it to the appropriate box or back to your INBOX.
+ - Ideally this could move the email back to your INBOX automatically, but I
+   currently do not attempt to do that.  It is something I'll investigate in the
+   near future.  It's actually rare anymore that I have to do anything in this
+   box but you might have to use it a bit at first when training.
 
-For this system we keep things fairly simple.  I've added comments into the file below so it's self-documenting, but based on any feedback I'll add more info here.
+ --- Scripts
 
-The file is available here and should be placed in your $HOME as .procmailrc
+spam-check script:
 
-ie:  If your username is perlninja this file would be placed such as /home/perlninja/.procmailrc or $HOME/.procmailrc
-crontab config
+This script is ran in a crontab on a schedule and checks the appropriate mailboxes
+for email to process for spam or to retrain email which is not spam.
 
-crontab is where the scheduled check for spam in the Spam folders is done, also the daily email purge/archive.
+You will need to edit the binary locations of files near the top of the script to
+point to your dspam_retrain script and sa-learn scripts but otherwise the script
+should not need much editing.  If your DSpam folder isn't /var/dspam you'll want
+to edit the dspam_home variable at the top as well.
 
-The easiest way to do this is to copy and paste, so I'll just put the lines here and tell you how to use them.  First I'll explain one of the lines so you understand it before we do that.
+The script is to be placed in a reasonable place.  You can put it in your
+$HOME/bin or /usr/bin or /usr/local/bin or wherever you feel. 
+
+purge-mail script:
+
+This script is also ran on a want your Trash emptied, your Spam-Old emails
+deleted, and if you have mailing lists coming in or mailboxes which generally
+can get quite large you can place lines in this script which will not only
+delete old email but can archive old email (move them to another mailbox).
+I find IMAP can get a little bogged down by very large mailboxes, so I archive
+my mailing lists at 180 days so they never get too large.  If I need to, I can
+look in the Archive for that mailbox.
+
+I would put it with the other scripts. 
+
+mbox-purge script:
+
+This script is secret ninja business and you shouldn't even look at it.
+Seriously, it's complicated.  I've modified it to give me the ability to
+Archive email, beyond that I've feared to explore.
+
+One thing you will need to do is install a Perl module named RS::Handy by the
+same guy who wrote this script in the first place and you'll want to make sure
+it doesn't need any other modules by running the script with no arguments and
+seeing if it gives you arguments for use or an error.  Other possibilities for
+modules required are Proc::WaitState or File::Spec both of which can be found
+on search.cpan.org (typical Perl module search engine).
+
+Note that this script is a modified version of what you can find at the website
+where you download the RS::Handy Perl module.  His version does not do archival.
+If you don't need this, you might investigate using his script as it's updated
+from mine.  Come to think of it, I should probably send him my hacked version
+and see if he'll add it to his as he's obviously a better Perl coder than
+myself.  http://www.argon.org/~roderick/ is where the original script and modules
+are located.
+
+dspam_retrain script:
+
+One additional script which is used to retrain emails inadvertently marked as
+spam is dspam_retrain, a script I found at
+http://www.nixworld.com/dspam_retrain.sh
+
+I don't know if the version there has changed, the file is no longer on the
+above website but there appear to be other similar versions on the internet.
+
+ --- Other files to configure
+
+procmail config:
+
+procmail is the bread and butter of mail filtering.  Once you understand it
+(or at least aren't scared of it) you can have it filter all of your email
+based on sender, destination, subject, tags, or anything in the body of the
+email.  It can forward (copy) the email to another destination, move it to
+another folder, pipe it into a program to do work on and probably lots of
+other things I don't know about.
+
+For this system we keep things fairly simple.  I've added comments into the
+file below so it's self-documenting, but based on any feedback I'll add more
+info.
+
+The file should be placed or merged into your existing file in your $HOME
+as .procmailrc
+
+ie:  If your username is perlninja this file would be placed such as
+/home/perlninja/.procmailrc or $HOME/.procmailrc
+
+crontab config:
+
+crontab is where the scheduled check for spam in the Spam folders is done, also
+the daily email purge/archive.
+
+The easiest way to do this is to copy and paste, so I'll just put the lines here
+and tell you how to use them.  First I'll explain one of the lines so you
+understand it before we do that.
 
 10 * * * * /usr/local/bin/spam-check
 
-This means that if it's 10 minutes past any hour, run this script.  You can run this more often if you like but there's not much point in my opinion.  However, if for instance you wish to run it every 10 minutes, you would put */10 for the first spot, so it would look like this:
+This means that if it's 10 minutes past any hour, run this script.  You can run
+this more often if you like but there's not much point in my opinion.  However,
+if for instance you wish to run it every 10 minutes, you would put */10 for the
+first spot, so it would look like this:
 
 */10 * * * * /usr/local/bin/spam-check
 
 Clear as mud?  Note that the path here depends on where you put your scripts. 
 
-So I suggest you do this, type:  crontab -e (warning; if you haven't set your $VISUAL or $EDITOR variables, this will likely bring up vi to edit which you might need to look into a bit  to understand how to use.. It's not too complicated.)
+So I suggest you do this, type:  crontab -e (warning; if you haven't set your
+$VISUAL or $EDITOR variables, this will likely bring up vi to edit which you
+might need to look into a bit to understand how to use.. It's not too
+complicated.)
 
 Paste in the following:
 
 10 * * * * /usr/local/bin/spam-check
 20 6 * * * /usr/local/bin/purge-mail
 
-That's it.  FYI, the reason I suggest "crontab -e" rather than editing a crontab file directly is because it might exist in different locations on different Unices. 
-Putting it All Together
+That's it.  FYI, the reason I suggest "crontab -e" rather than editing a crontab
+file directly is because it might exist in different locations on different Unices. 
 
-Put the scripts in a sane place, if you want to do less editing then use "/usr/local/bin" like I do.  Put the .procmailrc file in place, edit your crontab, and test!
+ --- Putting it All Together
 
-It might actually be best that you do not put the crontab into place at first.  This way instead of crontab running the scripts, you can run the scriptsed everything out, get your crontab edited and make sure you monitor things for a little while to make sure everything is working well.  I can't emphasize enough that you need to watch things at first to make sure it's set up right, or you can lose email.
+Put the scripts in a sane place, if you want to do less editing then use
+"/usr/local/bin" like I do.  Put the .procmailrc file in place, edit your
+crontab, and test!
 
-I want to mention again that DSpam can take months to train sometimes to its peak efficiency, so don't give up on it.  Retrain False Positives and Spam as they occur and it'll get better and better.  Right now my DSPam is  at 100% accuracy on non-Spam identification (ie:  No False Positives) and 99.91% on accuracy on Spam identification.  This means that for every 1000 emails I receive, 1 will be a spam that DSpam missed and 0 will have been a normal email that was falsely accused of being spam.  It doesn't get much better!
-Examples
+It might actually be best that you do not put the crontab into place at first.
+This way instead of crontab running the scripts, you can run the scripts and
+see what's happening in case there are any errors.  You can also watch the
+output of $HOME/Mail/procmail.log to see what procmail says about what it is
+doing, such as what folder an incoming email is delivered to, etc.
+
+Once you've tested everything out, get your crontab edited and make sure you
+monitor things for a little while to make sure everything is working well.
+I can't emphasize enough that you need to watch things at first to make sure
+it's set up right, or you can lose email.
+
+I want to mention again that DSpam can take months to train sometimes to its
+peak efficiency, so don't give up on it.  Retrain False Positives and Spam as
+they occur and it'll get better and better.  Right now my DSPam is at 100%
+accuracy on non-Spam identification (ie:  No False Positives) and 99.91% on
+accuracy on Spam identification.  This means that for every 1000 emails I
+receive, 1 will be a spam that DSpam missed and 0 will have been a normal
+email that was falsely accused of being spam.  It doesn't get much better!
+
+ --- Examples
 
 Here are some examples of the simple workflow for a few common situations.
 
-    Spam is delivered to your INBOX
-        Move the mail to the Spam mailbox.  That's it!
-            Various clients do this different ways, drag-and-drop, Move to Folder, etc
-    Check Spam box for False Positives
-        Change to your Spam-Old mailbox/folder
-        Read through the email subject lines for incorrectly marked emails. 
-    Fix innocent email is marked as Spam
-        From your Spam-Old mailbox/folder move the mail to the NotSpam mailbox
-        Later check the NotSpam-Old folder and move the email to the appropriate location (back to your INBOX, mailing list, etc)
-        By "later" if you go by my crontab examples, this means an hour.  You could manually run the spam-check script to force this to happen sooner if necessary.
+Spam is delivered to your INBOX
+ - Move the mail to the Spam mailbox.  That's it!
+    - Various clients do this different ways, drag-and-drop, Move to Folder,
+      etc
+
+Check Spam box for False Positives
+ - Change to your Spam-Old mailbox/folder
+ - Read through the email subject lines for incorrectly marked emails. 
+
+Fix innocent email is marked as Spam
+ - From your Spam-Old mailbox/folder move the mail to the NotSpam mailbox
+ - Later check the NotSpam-Old folder and move the email to the appropriate
+   location (back to your INBOX, mailing list, etc)
+ - By "later" if you go by my crontab examples, this means an hour.  You could
+   manually run the spam-check script to force this to happen sooner if necessary.
