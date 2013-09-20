@@ -1,0 +1,24 @@
+#!/bin/sh
+
+maildir="/home/`whoami`/mail"
+
+function purge {
+	days=$1
+	archive=$2
+	file=$3
+	if [ -z $1 ] || [ -z $2 ] || [ -z $3 ]; then
+		echo "Not enough arguments to purge:  $1 $2 $3"
+	fi
+	time=`echo 60*60*24*${days} | bc`
+	/usr/local/bin/mbox-purge --eval "time - delivery_time > $time" $archive $file
+}
+
+# Generic items
+
+# Syntax to delete old emails:
+# purge days --noarchive $maildir/mailbox
+# Syntax to archive old emails:
+# purge days --archive $maildir/mailbox
+
+purge 60 --noarchive $maildir/Trash
+purge 15 --noarchive $maildir/Spam-Old

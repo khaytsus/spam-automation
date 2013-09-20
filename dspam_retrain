@@ -1,0 +1,31 @@
+#!/bin/bash
+
+DSPAM_BINARY="/usr/local/bin/dspam"
+USER=`whoami`
+COUNT=0
+
+case "$1" in
+  ham)
+	echo -ne "Retraining ham..."
+	for i in `cat $2 |grep "X-DSPAM-Signature:" |awk {'print $2'}`
+	do
+		$DSPAM_BINARY --user $USER --class=innocent --source=error --signature=$i
+		COUNT=`expr $COUNT + 1`
+	done
+	echo "  Done.  Retrained $COUNT messages as not spam."
+        ;;
+  spam)
+	echo -ne "Retraining spam..."
+	for i in `cat $2 |grep "X-DSPAM-Signature:" |awk {'print $2'}`
+	do
+		$DSPAM_BINARY --user $USER --class=spam --source=error --signature=$i
+		COUNT=`expr $COUNT + 1`
+	done
+	echo "  Done.  Retrained $COUNT messages as spam."
+        ;;
+  *)
+	echo "This utility will retrain your DSPAM for ham or spam emails"
+        echo "Usage: $0 {ham|spam} {full path to your ham/spam mailbox/folder}"
+        exit 1
+esac
+

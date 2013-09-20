@@ -1,0 +1,114 @@
+#!/bin/sh
+
+# SA/DSpam binary locations
+dspam_retrain="/usr/local/bin/dspam_retrain"
+sa_learn="/usr/bin/sa-learn"
+
+# DSpam Homedir
+
+dspam_home="/var/dspam"
+
+# Determine user running script
+whoami=`whoami`
+
+# Locations of spam and notspam files
+spam_moved="/home/$whoami/mail/Spam"
+spam_dspam="/home/$whoami/mail/Spam-DSpam"
+spam_spamass="/home/$whoami/mail/Spam-SpamAss"
+spamold="/home/$whoami/mail/Spam-Old"
+notspam="/home/$whoami/mail/NotSpam"
+notspamold="/home/$whoami/mail/NotSpam-Old"
+
+# If spam file exists and is not empty, process for DSpam and Spam Assassin
+if [ -s $spam_moved ]; then
+echo "Learning spam all; currently Spam Assassin...  "
+
+	/bin/nice -n +19 $sa_learn --spam --mbox $spam_moved >/dev/null 2>&1
+        rc=$?
+        if [ $rc != 0 ]; then
+                echo Something failed in SA spam training..
+                exit
+        fi
+echo "Now for DSpam..."
+        /bin/nice -n +19 $dspam_retrain spam $spam_moved >/dev/null 2>&1
+        rc=$?
+        if [ $rc != 0 ]; then
+                echo Something failed in SA spam training..
+                exit
+        fi
+# Make sure spamold exists, then combine the files and make a new spam file
+        touch $spamold
+        cat $spam_moved $spamold > ${spamold}.tmp
+        mv -f ${spamold}.tmp $spamold
+        rm $spam_moved
+        touch $spam_moved
+fi
+
+# If spam file exists and is not empty, process for Spam Assassin
+if [ -s $spam_dspam ]; then
+#echo Learning spam for Spam Assassin...
+	/bin/nice -n +19 $sa_learn --spam --mbox $spam_dspam >/dev/null 2>&1
+	rc=$?
+	if [ $rc != 0 ]; then
+		echo Something failed in SA spam training..
+	        exit
+	fi
+# Make sure spamold exists, then combine the files and make a new spam file
+	touch $spamold
+	cat $spam_dspam $spamold > ${spamold}.tmp
+	mv -f ${spamold}.tmp $spamold
+	rm $spam_dspam
+	touch $spam_dspam
+fi
+
+# If spam file exists and is not empty, process for DSpam
+if [ -s $spam_spamass ]; then
+#echo Learning spam for DSpam...
+        /bin/nice -n +19 $dspam_retrain spam $spam_spamass >/dev/null 2>&1
+#	/bin/nice -n +19 $sa_learn --spam --mbox $spam_spamass
+	rc=$?
+	if [ $rc != 0 ]; then
+		echo Something failed in DSpam training..
+	        exit
+	fi
+# Make sure spamold exists, then combine the files and make a new spam file
+	touch $spamold
+	cat $spam_spamass $spamold > ${spamold}.tmp
+	mv -f ${spamold}.tmp $spamold
+	rm $spam_spamass
+	touch $spam_spamass
+fi
+
+# If notspam file exists and is not empty, process
+if [ -s $notspam ]; then
+#echo Learning ham..
+	/bin/nice -n +19 $sa_learn --ham --mbox $notspam >/dev/null 2>&1
+	rc=$?
+	if [ $rc != 0 ]; then
+		echo Something failed in SA ham training..
+	        exit
+	fi
+# If the user is opted-out of dspam, don't run it.
+	if [ ! -f $dspam_home/opt-out/${whoami}.nodspam ]; then
+		/bin/nice -n +19 $dspam_retrain ham $notspam >/dev/null 2>&1
+		rc=$?
+		if [ $rc != 0 ]; then
+			echo Something failed in dspam ham training..
+		        exit
+		fi
+	fi
+# Make sure notspamold exists, then combine the files
+# For notspam, we also fix any Subject lines with [SPAM] in them as we've
+#  clearly decided the emails are not spam.
+	touch $notspamold
+	cat $notspam $notspamold | \
+                sed -e 's/Subject: \[SPAM\] /Subject: /' \
+		    -e 's/subject: \[SPAM\] /Subject: /' \
+		    -e 's/Subject: Re: \[SPAM\] /Subject: Re: /' \
+		> ${notspamold}.tmp
+	mv -f ${notspamold}.tmp $notspamold
+	rm $notspam
+	touch $notspam
+fi
+
+
